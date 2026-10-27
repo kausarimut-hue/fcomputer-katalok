@@ -11,37 +11,7 @@
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.product-image{height:165px}}
 @media(max-width:540px){.topbar{padding:17px 15px 22px}.brand h1{font-size:17px}.logo{width:41px;height:41px}.admin-btn{padding:9px 10px;font-size:12px}.hero{padding-top:28px}.main{padding:18px 13px 36px}.grid{grid-template-columns:1fr;gap:13px}.product{display:grid;grid-template-columns:118px 1fr}.product-image{height:100%;min-height:170px}.product-body{padding:13px;gap:7px}.product-body h3{font-size:15px}.price{font-size:19px}.spec{font-size:12px;min-height:0}.card-actions{flex-wrap:wrap}.card-actions .btn{font-size:12px;padding:9px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.modal{padding:17px}.summary{align-items:flex-start;flex-direction:column}.admin-item{align-items:flex-start;flex-direction:column}.admin-item .actions{width:100%}.admin-item .actions button{flex:1}}
 </style>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-  import {
-    getFirestore,
-    collection,
-    getDocs,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    doc
-  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-  import {
-    getAuth,
-    signInWithEmailAndPassword,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCfPnb9ZDsxIS2MrmXc-HakWK4hfOBKoNU",
-    authDomain: "fcomputer-katalok.firebaseapp.com",
-    projectId: "fcomputer-katalok",
-    storageBucket: "fcomputer-katalok.firebasestorage.app",
-    messagingSenderId: "725499525294",
-    appId: "1:725499525294:web:d15e7c9df9df9e7df6d53f",
-    measurementId: "G-6S5HLTJYP2"
-  };
-
-  const firebaseApp = initializeApp(firebaseConfig);
-  const db = getFirestore(firebaseApp);
-  const auth = getAuth(firebaseApp);
-</script></head>
+</head>
 <body>
 <header class="topbar">
   <div class="wrap">
@@ -96,56 +66,319 @@
 </div>
 <div class="toast" id="toast" role="status"></div>
 
-<script>
-const STORAGE_KEY = "fcomputer_catalog_v1";
-const sampleProducts = [
- {id:"sample-hp630",name:"HP ProBook 630 G8",brand:"HP",condition:"Second",cpu:"Intel Core i5 Gen 11",ram:"8 GB",storage:"SSD 256 GB",price:4500000,imageUrl:"",description:"Laptop bisnis yang cocok untuk kuliah, kerja, dan aktivitas harian."},
- {id:"sample-x390",name:"Lenovo ThinkPad X390",brand:"Lenovo",condition:"Second",cpu:"Intel Core i5 Gen 8",ram:"8 GB",storage:"SSD 256 GB",price:4000000,imageUrl:"",description:"Laptop ringkas untuk produktivitas sehari-hari."},
- {id:"sample-surface-go",name:"Microsoft Surface Go",brand:"Microsoft",condition:"Second",cpu:"Intel Pentium Gold",ram:"8 GB",storage:"SSD 128 GB",price:3000000,imageUrl:"",description:"Perangkat ringan untuk kebutuhan belajar dan penggunaan ringan."}
-];
-let products = loadProducts();
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, addDoc,
+  updateDoc, deleteDoc, doc
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCfPnb9ZDsxIS2MrmXc-HakWK4hfOBKoNU",
+  authDomain: "fcomputer-katalok.firebaseapp.com",
+  projectId: "fcomputer-katalok",
+  storageBucket: "fcomputer-katalok.firebasestorage.app",
+  messagingSenderId: "725499525294",
+  appId: "1:725499525294:web:d15e7c9df9df9e7df6d53f",
+  measurementId: "G-6S5HLTJYP2"
+};
+
+const ADMIN_UID = "7yrGvsMh6LMxp3WvU7Fled31Kxj1";
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 const $ = id => document.getElementById(id);
-function loadProducts(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const data=JSON.parse(raw);if(Array.isArray(data))return data;}}catch(e){}return sampleProducts.map(p=>({...p}));}
-function saveProducts(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(products));}catch(e){toast("Data tidak bisa disimpan. Periksa ruang penyimpanan browser.");}render();}
-function money(n){return new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);}
-function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function specs(p){return [p.cpu,p.ram&&"RAM "+p.ram,p.storage].filter(Boolean).map(safe).join(" · ")||"Spesifikasi belum ditambahkan";}
-function render(){
- const query=$("searchInput").value.trim().toLowerCase(), condition=$("statusFilter").value, sort=$("sortSelect").value;
- let list=products.filter(p=>(condition==="all"||p.condition===condition)&&[p.name,p.brand,p.cpu,p.ram,p.storage,p.description].join(" ").toLowerCase().includes(query));
- if(sort==="low")list.sort((a,b)=>a.price-b.price);if(sort==="high")list.sort((a,b)=>b.price-a.price);
- $("resultCount").textContent=`Menampilkan ${list.length} dari ${products.length} laptop`;
- const grid=$("productGrid");
- if(!list.length){grid.innerHTML='<div class="empty"><div style="font-size:32px;margin-bottom:8px">⌕</div><strong>Laptop tidak ditemukan</strong><p>Coba kata kunci lain atau ubah filter pencarian.</p></div>';return;}
- grid.innerHTML=list.map(p=>`<article class="product">
-  <div class="product-image">${p.imageUrl?`<img src="${safe(p.imageUrl)}" alt="${safe(p.name)}" loading="lazy" onerror="this.remove()">`:'<div class="placeholder" aria-hidden="true">▱</div>'}<span class="tag">${safe(p.condition||"Second")}</span></div>
-  <div class="product-body"><div class="small-label">${safe(p.brand||"Laptop")}</div><h3>${safe(p.name)}</h3><div class="spec">${specs(p)}</div>${p.description?`<div class="tiny">${safe(p.description)}</div>`:""}<div style="margin-top:auto"><div class="small-label">Harga</div><div class="price">${money(p.price)}</div></div><div class="card-actions"><button class="btn btn-light" data-copy="${safe(p.id)}">Salin Info</button></div></div>
- </article>`).join("");
- grid.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>{const p=products.find(x=>x.id===b.dataset.copy);if(p){const text=`${p.name}\n${[p.cpu,p.ram&&"RAM "+p.ram,p.storage].filter(Boolean).join(" | ")}\nKondisi: ${p.condition}\nHarga: ${money(p.price)}\nFCOMPUTER`;if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>toast("Info laptop disalin.")).catch(()=>copyFallback(text));else copyFallback(text);}}));
+
+const sampleProducts = [
+ {id:"sample-hp630",name:"HP ProBook 630 G8",brand:"HP",condition:"Second",cpu:"Intel Core i5 Gen 11",ram:"8 GB",storage:"SSD 256 GB",price:4500000,imageUrl:"",description:"Laptop bisnis untuk kuliah dan kerja."},
+ {id:"sample-x390",name:"Lenovo ThinkPad X390",brand:"Lenovo",condition:"Second",cpu:"Intel Core i5 Gen 8",ram:"8 GB",storage:"SSD 256 GB",price:4000000,imageUrl:"",description:"Laptop ringkas untuk produktivitas."},
+ {id:"sample-surface-go",name:"Microsoft Surface Go",brand:"Microsoft",condition:"Second",cpu:"Intel Pentium Gold",ram:"8 GB",storage:"SSD 128 GB",price:3000000,imageUrl:"",description:"Perangkat ringan untuk belajar."}
+];
+
+let products = [];
+let isAdmin = false;
+let editingId = null;
+
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2800);
 }
-function copyFallback(text){const t=document.createElement("textarea");t.value=text;document.body.appendChild(t);t.select();try{document.execCommand("copy");toast("Info laptop disalin.");}catch(e){toast("Salin info ini secara manual.");}t.remove();}
-function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),2600);}
-function showModal(id){$(id).classList.add("show");}
-function hideModal(id){$(id).classList.remove("show");}
-function renderAdmin(){
- const list=$("adminList");
- if(!products.length){list.innerHTML='<div class="empty">Belum ada produk. Tekan “Tambah Laptop”.</div>';return;}
- list.innerHTML=products.map(p=>`<div class="admin-item"><div><strong>${safe(p.name)}</strong><small>${money(p.price)} · ${safe(p.condition||"Second")}</small></div><div class="actions"><button class="btn btn-light" data-edit="${safe(p.id)}">Edit</button><button class="btn btn-danger" data-delete="${safe(p.id)}">Hapus</button></div></div>`).join("");
- list.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProduct(b.dataset.edit));
- list.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProduct(b.dataset.delete));
+function money(n) {
+  return new Intl.NumberFormat("id-ID", {
+    style:"currency", currency:"IDR", maximumFractionDigits:0
+  }).format(Number(n) || 0);
 }
-function openAdmin(){renderAdmin();showModal("adminModal");}
-function blankForm(){ $("productForm").reset();$("productId").value="";$("productFormTitle").textContent="Tambah Laptop";$("condition").value="Second"; }
-function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;blankForm();$("productFormTitle").textContent="Edit Laptop";$("productId").value=p.id;$("name").value=p.name||"";$("brand").value=p.brand||"";$("condition").value=p.condition||"Second";$("cpu").value=p.cpu||"";$("ram").value=p.ram||"";$("storage").value=p.storage||"";$("price").value=p.price||0;$("imageUrl").value=p.imageUrl||"";$("description").value=p.description||"";showModal("productModal");}
-function deleteProduct(id){const p=products.find(x=>x.id===id);if(!p)return;if(confirm(`Hapus ${p.name} dari katalog di browser ini?`)){products=products.filter(x=>x.id!==id);saveProducts();renderAdmin();toast("Produk dihapus dari browser ini.");}}
-$("productForm").addEventListener("submit",e=>{e.preventDefault();const id=$("productId").value||("laptop-"+Date.now());const item={id,name:$("name").value.trim(),brand:$("brand").value.trim(),condition:$("condition").value,cpu:$("cpu").value.trim(),ram:$("ram").value.trim(),storage:$("storage").value.trim(),price:Number($("price").value),imageUrl:$("imageUrl").value.trim(),description:$("description").value.trim()};if(!item.name||!Number.isFinite(item.price)||item.price<0){toast("Isi nama dan harga dengan benar.");return;}const idx=products.findIndex(p=>p.id===id);if(idx>=0)products[idx]=item;else products.unshift(item);saveProducts();renderAdmin();hideModal("productModal");toast("Produk tersimpan di browser ini.");});
-$("openAdmin").onclick=openAdmin;$("closeAdmin").onclick=()=>hideModal("adminModal");$("doneAdmin").onclick=()=>hideModal("adminModal");$("addProduct").onclick=()=>{blankForm();showModal("productModal");};$("closeProduct").onclick=()=>hideModal("productModal");$("cancelProduct").onclick=()=>hideModal("productModal");
-$("searchInput").addEventListener("input",render);$("statusFilter").addEventListener("change",render);$("sortSelect").addEventListener("change",render);
-$("exportData").onclick=()=>{const blob=new Blob([JSON.stringify(products,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="fcomputer-katalog.json";a.click();URL.revokeObjectURL(url);toast("Data katalog diekspor.");};
-$("importData").onclick=()=>$("importFile").click();$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data)||!data.every(p=>p&&typeof p.name==="string"&&Number.isFinite(Number(p.price))))throw new Error("format");products=data.map((p,i)=>({...p,id:String(p.id||("import-"+Date.now()+"-"+i)),price:Number(p.price)}));saveProducts();renderAdmin();toast("Data berhasil diimpor ke browser ini.");}catch(err){toast("File tidak sesuai format katalog FCOMPUTER.");}e.target.value="";});
-$("resetSamples").onclick=()=>{if(confirm("Pulihkan tiga contoh laptop? Data katalog saat ini akan diganti.")){products=sampleProducts.map(p=>({...p}));saveProducts();renderAdmin();toast("Contoh katalog dipulihkan.");}};
-document.querySelectorAll(".modal-backdrop").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)hideModal(el.id);}));
-$("year").textContent=new Date().getFullYear();render();
+function safe(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+function specs(p) {
+  return [p.cpu, p.ram && "RAM " + p.ram, p.storage]
+    .filter(Boolean).map(safe).join(" · ") || "Spesifikasi belum tersedia";
+}
+function showModal(id) { $(id).classList.add("show"); }
+function hideModal(id) { $(id).classList.remove("show"); }
+
+async function loadProducts() {
+  $("resultCount").textContent = "Memuat katalog...";
+  try {
+    const snap = await getDocs(collection(db, "products"));
+    products = snap.docs.map(d => ({...d.data(), id:d.id}));
+    render();
+    renderAdmin();
+  } catch (e) {
+    console.error(e);
+    products = [];
+    render();
+    toast("Gagal memuat Firestore. Periksa koneksi dan Rules.");
+  }
+}
+
+function render() {
+  const query = $("searchInput").value.trim().toLowerCase();
+  const condition = $("statusFilter").value;
+  const sort = $("sortSelect").value;
+
+  let list = products.filter(p =>
+    (condition === "all" || p.condition === condition) &&
+    [p.name,p.brand,p.cpu,p.ram,p.storage,p.description]
+      .join(" ").toLowerCase().includes(query)
+  );
+
+  if (sort === "low") list.sort((a,b) => Number(a.price)-Number(b.price));
+  if (sort === "high") list.sort((a,b) => Number(b.price)-Number(a.price));
+
+  $("resultCount").textContent =
+    Menampilkan ${list.length} dari ${products.length} laptop;
+
+  const grid = $("productGrid");
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty">Belum ada laptop di katalog atau tidak ada hasil yang cocok.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(p => `
+    <article class="product">
+      <div class="product-image">
+        ${p.imageUrl
+          ? <img src="${safe(p.imageUrl)}" alt="${safe(p.name)}" loading="lazy">
+          : '<div class="placeholder">▱</div>'}
+        <span class="tag">${safe(p.condition || "Second")}</span>
+      </div>
+      <div class="product-body">
+        <div class="small-label">${safe(p.brand || "Laptop")}</div>
+        <h3>${safe(p.name)}</h3>
+        <div class="spec">${specs(p)}</div>
+        ${p.description ? <div class="tiny">${safe(p.description)}</div> : ""}
+        <div style="margin-top:auto">
+          <div class="small-label">Harga</div>
+          <div class="price">${money(p.price)}</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-light" data-copy="${safe(p.id)}">Salin Info</button>
+        </div>
+      </div>
+    </article>`).join("");
+
+  grid.querySelectorAll("[data-copy]").forEach(b => {
+    b.onclick = async () => {
+      const p = products.find(x => x.id === b.dataset.copy);
+      if (!p) return;
+      const text = ${p.name}\n${p.cpu || ""} | RAM ${p.ram || "-"} | ${p.storage || ""}\nKondisi: ${p.condition}\nHarga: ${money(p.price)}\nFCOMPUTER;
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Info laptop disalin.");
+      } catch {
+        toast(text);
+      }
+    };
+  });
+}
+
+function renderAdmin() {
+  const list = $("adminList");
+  $("addProduct").disabled = !isAdmin;
+  $("resetSamples").disabled = !isAdmin;
+
+  if (!isAdmin) {
+    list.innerHTML = '<div class="empty">Login admin diperlukan untuk mengelola produk.</div>';
+    return;
+  }
+  if (!products.length) {
+    list.innerHTML = '<div class="empty">Katalog masih kosong. Tekan Tambah Laptop.</div>';
+    return;
+  }
+
+  list.innerHTML = products.map(p => `
+    <div class="admin-item">
+      <div><strong>${safe(p.name)}</strong><small>${money(p.price)} · ${safe(p.condition || "Second")}</small></div>
+      <div class="actions">
+        <button class="btn btn-light" data-edit="${safe(p.id)}">Edit</button>
+        <button class="btn btn-danger" data-delete="${safe(p.id)}">Hapus</button>
+      </div>
+    </div>`).join("");
+
+  list.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProduct(b.dataset.edit));
+  list.querySelectorAll("[data-delete]").forEach(b => b.onclick = () => deleteProduct(b.dataset.delete));
+}
+
+async function openAdmin() {
+  showModal("adminModal");
+  if (auth.currentUser?.uid === ADMIN_UID) {
+    isAdmin = true;
+    renderAdmin();
+    return;
+  }
+
+  const email = prompt("Masukkan email admin Firebase:");
+  if (!email) return;
+  const password = prompt("Masukkan kata sandi admin Firebase:");
+  if (!password) return;
+
+  try {
+    const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+    if (result.user.uid !== ADMIN_UID) {
+      await signOut(auth);
+      isAdmin = false;
+      renderAdmin();
+      toast("Akun ini bukan admin yang diizinkan.");
+      return;
+    }
+    isAdmin = true;
+    renderAdmin();
+    toast("Login admin berhasil.");
+  } catch (e) {
+    console.error(e);
+    toast("Login gagal. Periksa email dan kata sandi.");
+  }
+}
+
+function blankForm() {
+  $("productForm").reset();
+  editingId = null;
+  $("productFormTitle").textContent = "Tambah Laptop";
+  $("condition").value = "Second";
+}
+function editProduct(id) {
+  if (!isAdmin) return toast("Login admin diperlukan.");
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  blankForm();
+  editingId = id;
+  $("productFormTitle").textContent = "Edit Laptop";
+  $("name").value = p.name || "";
+  $("brand").value = p.brand || "";
+  $("condition").value = p.condition || "Second";
+  $("cpu").value = p.cpu || "";
+  $("ram").value = p.ram || "";
+  $("storage").value = p.storage || "";
+  $("price").value = p.price || 0;
+  $("imageUrl").value = p.imageUrl || "";
+  $("description").value = p.description || "";
+  showModal("productModal");
+}
+
+async function deleteProduct(id) {
+  if (!isAdmin || auth.currentUser?.uid !== ADMIN_UID) return;
+  const p = products.find(x => x.id === id);
+  if (!p || !confirm(Hapus ${p.name} dari katalog online?)) return;
+  try {
+    await deleteDoc(doc(db, "products", id));
+    await loadProducts();
+    toast("Produk dihapus dari katalog online.");
+  } catch (e) {
+    console.error(e);
+    toast("Gagal menghapus. Periksa Firestore Rules.");
+  }
+}
+
+$("productForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!isAdmin || auth.currentUser?.uid !== ADMIN_UID) {
+    toast("Login admin diperlukan.");
+    return;
+  }
+
+  const item = {
+    name:$("name").value.trim(),
+    brand:$("brand").value.trim(),
+    condition:$("condition").value,
+    cpu:$("cpu").value.trim(),
+    ram:$("ram").value.trim(),
+    storage:$("storage").value.trim(),
+    price:Number($("price").value),
+    imageUrl:$("imageUrl").value.trim(),
+    description:$("description").value.trim()
+  };
+
+  if (!item.name || !Number.isFinite(item.price) || item.price < 0) {
+    toast("Isi nama dan harga dengan benar.");
+    return;
+  }
+
+  try {
+    if (editingId) {
+      await updateDoc(doc(db, "products", editingId), item);
+    } else {
+      await addDoc(collection(db, "products"), item);
+    }
+    await loadProducts();
+    renderAdmin();
+    hideModal("productModal");
+    toast("Produk tersimpan di Firestore.");
+  } catch (e) {
+    console.error(e);
+    toast("Gagal menyimpan. Periksa Firestore Rules.");
+  }
+});
+
+$("openAdmin").onclick = openAdmin;
+$("closeAdmin").onclick = () => hideModal("adminModal");
+$("doneAdmin").onclick = () => hideModal("adminModal");
+$("addProduct").onclick = () => {
+  if (!isAdmin) return toast("Login admin diperlukan.");
+  blankForm();
+  showModal("productModal");
+};
+$("closeProduct").onclick = () => hideModal("productModal");
+$("cancelProduct").onclick = () => hideModal("productModal");
+$("searchInput").addEventListener("input", render);
+$("statusFilter").addEventListener("change", render);
+$("sortSelect").addEventListener("change", render);
+
+$("exportData").onclick = () => {
+  const blob = new Blob([JSON.stringify(products, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "fcomputer-katalog.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+$("importData").onclick = () => toast("Impor data belum diaktifkan pada versi Firestore ini.");
+$("resetSamples").onclick = () => toast("Contoh awal tidak akan menimpa katalog online.");
+
+document.querySelectorAll(".modal-backdrop").forEach(el => {
+  el.addEventListener("click", e => {
+    if (e.target === el) hideModal(el.id);
+  });
+});
+
+onAuthStateChanged(auth, user => {
+  isAdmin = !!user && user.uid === ADMIN_UID;
+  renderAdmin();
+});
+
+$("year").textContent = new Date().getFullYear();
+await loadProducts();
 </script>
 </body>
 </html>
